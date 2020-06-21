@@ -49,6 +49,13 @@ public:
   //! @brief Access the underlying data by const reference
   const DataType& coeffs() const;
 
+  auto transpose() const {return coeffs().transpose();} // TODO: make proper
+  Scalar operator()(int idx) const {return coeffs()(idx);} // TODO: make proper
+  DataType& toImplementation(){return coeffs();}// TODO: make proper
+  const DataType& toImplementation()const{return coeffs();}// TODO: make proper
+  auto noalias() {return coeffs().noalias();} // TODO: make proper
+
+
   //! @brief Access the underlying data by pointer
   Scalar* data();
   //! @brief Access the underlying data by const pointer
@@ -281,6 +288,9 @@ public:
    */
   template <typename _EigenDerived>
   _Derived& operator =(const Eigen::MatrixBase<_EigenDerived>& v);
+
+  template <typename _EigenDerived>
+  Eigen::MatrixBase<_EigenDerived>& operator =(const TangentBase<_Derived>& t) const; // TODO: not really required now...
 
   template <typename T>
   auto operator <<(T&& v)
@@ -636,6 +646,13 @@ _Derived& TangentBase<_Derived>::operator =(
 }
 
 template <typename _Derived>
+template <typename _EigenDerived>
+Eigen::MatrixBase<_EigenDerived>& TangentBase<_Derived>::operator =(const TangentBase<_Derived>& t) const
+{
+  return t.coeffs(); // TODO: fix me
+}
+
+template <typename _Derived>
 template <typename T>
 auto TangentBase<_Derived>::operator <<(T&& v)
 ->decltype( std::declval<DataType>().operator<<(std::forward<T>(v)) )
@@ -807,6 +824,23 @@ operator *(const TangentBase<_Derived>& t,
 {
   typename TangentBase<_Derived>::Tangent ret(t);
   return ret *= scalar;
+}
+
+// this is required to allow for t.transpose() * M * t using Eigen API
+/** // for  example:
+    manif::SE2Tangentd t_test;
+    t_test.setRandom();
+    Eigen::Matrix<double, 3, 3> M_test;
+    M_test.setRandom();
+    std::cout << t_test.transpose() * t_test << std::endl;
+    std::cout << t_test.transpose() * M_test * t_test << std::endl;
+
+    //std::cout << std::endl;
+ */
+template <typename _Derived, typename _EigenDerived>
+auto operator*(const Eigen::MatrixBase<_EigenDerived> &m,
+               const TangentBase<_Derived> &t) {
+  return m * t.coeffs(); // todo: fix that properly
 }
 
 template <typename _Derived, typename T>
